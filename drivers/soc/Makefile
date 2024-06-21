@@ -33,7 +33,7 @@ obj-$(CONFIG_OPLUS_SYSTEM_KERNEL)	+= oplus/system/
 #endif /* OPLUS_SYSTEM_KERNEL */
 
 #ifdef OPLUS_FEATURE_TP_BASIC
-obj-$(CONFIG_OPLUS_DEVICE_IFNO)  +=  oplus/device_info/
+obj-$(CONFIG_OPLUS_DEVICE_INFO)  +=  oplus/device_info/
 #endif /*OPLUS_FEATURE_TP_BASIC*/
 
 
