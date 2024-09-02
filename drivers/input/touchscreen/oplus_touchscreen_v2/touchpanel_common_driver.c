@@ -108,6 +108,7 @@ extern  int reconfig_power_control(struct touchpanel_data *ts);
 #if IS_ENABLED(CONFIG_TOUCHPANEL_NOTIFY)
 static int tp_gesture_enable_flag(unsigned int tp_index);
 extern int (*tp_gesture_enable_notifier)(unsigned int tp_index);
+extern int (*tp_cs_gpio_notifier)(bool enable, unsigned int tp_index);
 #endif
 
 #ifdef CONFIG_TOUCHPANEL_MTK_PLATFORM
@@ -3345,6 +3346,7 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 	mutex_unlock(&tp_core_lock);
 #if IS_ENABLED(CONFIG_TOUCHPANEL_NOTIFY)
 	tp_gesture_enable_notifier = tp_gesture_enable_flag;
+	tp_cs_gpio_notifier = tp_control_cs_gpio;
 #endif
 	TP_INFO(ts->tp_index, "Touch panel probe : normal end\n");
 	return 0;

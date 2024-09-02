@@ -31,6 +31,7 @@ static int nvt_get_chip_info(void *chip_data);
 static int nvt_get_touch_points_high_reso(void *chip_data, struct point_info *points, int max_num);
 static int nvt_get_touch_points(void *chip_data, struct point_info *points, int max_num);
 static int32_t nvt_ts_point_data_checksum(uint8_t *buf, uint8_t length);
+extern int (*tp_cs_gpio_notifier)(bool enable, unsigned int tp_index);
 
 /*******Part2: id map table Declear********************/
 static const struct nvt_ts_mem_map NT36675_memory_map = {
@@ -6859,6 +6860,14 @@ int nvt_tp_probe(struct spi_device *client)
 
 	if (ret < 0) {
 		goto err_register_driver;
+	}
+
+	/* set spi cs pin to high for normal boot */
+	if (tp_cs_gpio_notifier) {
+		tp_cs_gpio_notifier(1, ts->tp_index);
+		TPD_INFO("%s: set spi cs pin to high for normal boot.\n", __func__);
+	} else {
+		TPD_INFO("%s: tp_cs_gpio_notifier is null.\n", __func__);
 	}
 
 	ts->tp_suspend_order = TP_LCD_SUSPEND;
