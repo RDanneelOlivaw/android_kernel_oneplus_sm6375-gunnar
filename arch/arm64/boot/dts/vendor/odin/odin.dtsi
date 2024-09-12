@@ -1,3 +1,0 @@
-/* DTB: Platform related generic modifications */
-#include "holi-oem-common.dtsi"
-

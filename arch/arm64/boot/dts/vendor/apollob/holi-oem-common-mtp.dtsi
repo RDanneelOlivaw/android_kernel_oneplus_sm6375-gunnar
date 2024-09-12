@@ -1,7 +1,0 @@
-#include "../qcom/holi-mtp.dtsi"
-/* DTBO: Platform common generic overlay */
-
-&soc {
-
-};
-
