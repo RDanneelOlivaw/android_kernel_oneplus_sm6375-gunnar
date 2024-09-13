@@ -14,7 +14,7 @@
 #include <linux/interrupt.h>
 #include <linux/rtc.h>
 #include <linux/syscalls.h>
-#include <linux/version.h>
+#include <soc/oplus/device_info.h>
 
 #include "touchpanel_common.h"
 #include "touchpanel_autotest/touchpanel_autotest.h"
