@@ -3161,14 +3161,6 @@ int init_touchpanel_proc(struct touchpanel_data *ts)
 			"double_tap_enable_indep", 0666, NULL, &proc_gesture_control_indep_fops, ts, false,
 			ts->black_gesture_indep_support
 		},
-		{
-			"calibration", 0666, NULL, &proc_calibrate_fops, ts, false,
-			ts->auto_test_need_cal_support
-		},
-		{
-			"calibration_status", 0666, NULL, &proc_cal_status_fops, ts, false,
-			ts->auto_test_need_cal_support
-		},
 		/* proc/touchpanel/oplus_apk. Add the new test node for debug and apk. By zhangping 20190402 start*/
 #ifdef CONFIG_OPLUS_TP_APK
 		{"oplus_apk", 0666, NULL, &proc_oplus_apk_fops, ts, false, true},
@@ -3192,11 +3184,8 @@ int init_touchpanel_proc(struct touchpanel_data *ts)
 
 	} else {
 		TP_INFO(ts->tp_index, "register_devinfo not defined!\n");
-		ret = register_device_proc(name, ts->panel_data.manufacture_info.version,
+		register_device_proc(name, ts->panel_data.manufacture_info.version,
 				     ts->panel_data.manufacture_info.manufacture);
-		if (ret) {
-			pr_err("register_manufacture_devinfo fail\n");
-		}
 	}
 
 #endif
@@ -3238,6 +3227,7 @@ int init_touchpanel_proc(struct touchpanel_data *ts)
 
 	/*create debug_info node*/
 	init_debug_info_proc(ts);
+	init_debug_info_proc(ts);
 
 	return ret;
 }
@@ -3246,10 +3236,6 @@ void remove_touchpanel_proc(struct touchpanel_data *ts)
 {
 	char name[TP_NAME_SIZE_MAX];
 
-	if (!ts) {
-		TPD_INFO("%s: ts is null.\n", __func__);
-		return;
-	}
 	if (ts->tp_index == 0) {
 		snprintf(name, TP_NAME_SIZE_MAX, "%s", TPD_DEVICE);
 
@@ -3257,7 +3243,7 @@ void remove_touchpanel_proc(struct touchpanel_data *ts)
 		snprintf(name, TP_NAME_SIZE_MAX, "%s%d", TPD_DEVICE, ts->tp_index);
 	}
 
-	if (ts->prEntry_tp) {
+	if (ts && ts->prEntry_tp) {
 		remove_proc_subtree(name, NULL);
 	}
 }
