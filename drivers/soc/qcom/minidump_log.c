@@ -1306,6 +1306,7 @@ static void md_register_module_data(void)
 		unregister_module_notifier(&md_module_nb);
 }
 #endif	/* CONFIG_MODULES */
+#endif/* CONFIG_QCOM_MINIDUMP_PANIC_DUMP */
 
 static int __init msm_minidump_log_init(void)
 {
