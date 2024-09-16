@@ -45,8 +45,8 @@
 #include <linux/percpu.h>
 
 #include <linux/module.h>
-//#include <linux/cma.h>
-//#include <linux/dma-contiguous.h>
+#include <linux/cma.h>
+#include <linux/dma-contiguous.h>
 #endif
 
 #ifdef CONFIG_QCOM_DYN_MINIDUMP_STACK
@@ -114,10 +114,10 @@ struct seq_buf *md_meminfo_seq_buf;
 
 struct seq_buf *md_slabinfo_seq_buf;
 
-//#ifdef CONFIG_PAGE_OWNER
-//size_t md_pageowner_dump_size = SZ_2M;
-//char *md_pageowner_dump_addr;
-//#endif
+#ifdef CONFIG_PAGE_OWNER
+size_t md_pageowner_dump_size = SZ_2M;
+char *md_pageowner_dump_addr;
+#endif
 
 #ifdef CONFIG_SLUB_DEBUG
 size_t md_slabowner_dump_size = SZ_2M;
@@ -1020,10 +1020,10 @@ dump_rq:
 		md_dump_slabowner();
 #endif
 
-// #ifdef CONFIG_PAGE_OWNER
-//	if (md_pageowner_dump_addr)
-//		md_dump_pageowner();
-//#endif
+#ifdef CONFIG_PAGE_OWNER
+	if (md_pageowner_dump_addr)
+		md_dump_pageowner();
+#endif
 	md_in_oops_handler = false;
 	return NOTIFY_DONE;
 }
@@ -1086,6 +1086,102 @@ err_seq_buf:
 	return ret;
 }
 
+static bool md_register_memory_dump(int size, char *name)
+{
+	void *buffer_start;
+	struct page *page;
+	int ret;
+
+	page  = cma_alloc(dev_get_cma_area(NULL), size >> PAGE_SHIFT,
+			0, false);
+
+	if (!page) {
+		pr_err("Failed to allocate %s minidump, increase cma size\n",
+			name);
+		return false;
+	}
+
+	buffer_start = page_to_virt(page);
+	ret = md_register_minidump_entry(name, (uintptr_t)buffer_start,
+			virt_to_phys(buffer_start), size);
+	if (ret < 0) {
+		cma_release(dev_get_cma_area(NULL), page, size >> PAGE_SHIFT);
+		return false;
+	}
+
+	/* Complete registration before adding enteries */
+	smp_mb();
+
+#ifdef CONFIG_PAGE_OWNER
+	if (!strcmp(name, "PAGEOWNER"))
+		WRITE_ONCE(md_pageowner_dump_addr, buffer_start);
+#endif
+	return true;
+}
+
+static bool md_unregister_memory_dump(char *name)
+{
+	struct page *page;
+	struct md_region *mdr;
+	struct md_region md_entry;
+
+	mdr = md_get_region(name);
+	if (!mdr) {
+		pr_err("minidump entry for %s not found\n", name);
+		return false;
+	}
+	strlcpy(md_entry.name, mdr->name, sizeof(md_entry.name));
+	md_entry.virt_addr = mdr->virt_addr;
+	md_entry.phys_addr = mdr->phys_addr;
+	md_entry.size = mdr->size;
+	page = virt_to_page(mdr->virt_addr);
+
+	if (msm_minidump_remove_region(&md_entry) < 0)
+		return false;
+
+	cma_release(dev_get_cma_area(NULL), page,
+			(md_entry.size) >> PAGE_SHIFT);
+	return true;
+}
+
+static void update_dump_size(char *name, size_t size,
+		char **addr, size_t *dump_size)
+{
+	if ((*dump_size) == 0) {
+		if (md_register_memory_dump(size * SZ_1M,
+						name)) {
+			*dump_size = size * SZ_1M;
+			pr_info_ratelimited("%s Minidump set to %zd MB size\n",
+					name, size);
+		}
+		return;
+	}
+	if (md_unregister_memory_dump(name)) {
+		*addr = NULL;
+		if (size == 0) {
+			*dump_size = 0;
+			pr_info_ratelimited("%s Minidump : disabled\n", name);
+			return;
+		}
+		if (md_register_memory_dump(size * SZ_1M,
+						name)) {
+			*dump_size = size * SZ_1M;
+			pr_info_ratelimited("%s Minidump : set to %zd MB\n",
+					name, size);
+		} else if (md_register_memory_dump(*dump_size,
+							name)) {
+			pr_info_ratelimited("%s Minidump : Fallback to %zd MB\n",
+					name, (*dump_size) / SZ_1M);
+		} else {
+			pr_err_ratelimited("%s Minidump : disabled, Can't fallback to %zd MB,\n",
+						name, (*dump_size) / SZ_1M);
+			*dump_size = 0;
+		}
+	} else {
+		pr_err_ratelimited("Failed to unregister %s Minidump\n", name);
+	}
+}
+
 #ifdef CONFIG_SLUB_DEBUG
 static ssize_t slab_owner_dump_size_write(struct file *file,
 					  const char __user *ubuf,
@@ -1136,7 +1232,7 @@ static void md_register_panic_data(void)
 //		debugfs_create_file("page_owner_dump_size_mb", 0400, NULL, NULL,
 //			    &proc_page_owner_dump_size_ops);
 //	}
-#endif
+//#endif
 #ifdef CONFIG_SLUB_DEBUG
 	if (is_slub_debug_enabled()) {
 		md_register_memory_dump(md_slabowner_dump_size, "SLABOWNER");
@@ -1210,7 +1306,6 @@ static void md_register_module_data(void)
 		unregister_module_notifier(&md_module_nb);
 }
 #endif	/* CONFIG_MODULES */
-#endif	/* CONFIG_QCOM_MINIDUMP_PANIC_DUMP */
 
 static int __init msm_minidump_log_init(void)
 {
