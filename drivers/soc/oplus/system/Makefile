@@ -2,6 +2,7 @@
 # Copyright (C) 2018-2020 Oplus. All rights reserved.
 
 obj-y 	+= platform.o
+obj-$(CONFIG_OPLUS_FEATURE_FEEDBACK) 	+= feedback/
 obj-$(CONFIG_OPLUS_FEATURE_OPROJECT) 	+= oplus_project/
 obj-$(CONFIG_OPLUS_FEATURE_PHOENIX)     += oplus_phoenix/
 obj-$(CONFIG_OPLUS_FEATURE_RECORD_MDMRST)     += mdmrst/
@@ -20,3 +21,6 @@ obj-$(CONFIG_OPLUS_FEATURE_THEIA)     += theia/
 #ifdef OPLUS_FEATURE_MDMFEATURE
 obj-$(CONFIG_OPLUS_FEATURE_MDMFEATURE)     += mdmfeature/
 #endif /*OPLUS_FEATURE_MDMFEATURE*/
+#ifdef OPLUS_FEATURE_MM_FEEDBACK
+obj-$(CONFIG_OPLUS_FEATURE_MM_FEEDBACK)         += oplus_mm_fb/
+#endif /* OPLUS_FEATURE_MM_FEEDBACK */
