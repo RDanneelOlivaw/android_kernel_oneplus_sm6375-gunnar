@@ -49,6 +49,10 @@
 #include <linux/dma-contiguous.h>
 #endif
 
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_QCOM_MINIDUMP_ENHANCE)
+#include <soc/oplus/system/qcom_minidump_enhance.h>
+#endif
+
 #ifdef CONFIG_QCOM_DYN_MINIDUMP_STACK
 
 #include <trace/events/sched.h>
@@ -656,16 +660,10 @@ static void md_dump_task_info(struct task_struct *task, char *status,
 
 	se = &task->se;
 	if (task == curr) {
-#ifdef CONFIG_ARM64
 		seq_buf_printf(md_runq_seq_buf,
 			       "[status: curr] pid: %d comm: %s preempt: %#x\n",
 			       task_pid_nr(task), task->comm,
 			       task->thread_info.preempt_count);
-#else
-		seq_buf_printf(md_runq_seq_buf,
-				"[status: curr] pid: %d comm: %s\n",
-				task_pid_nr(task), task->comm);
-#endif
 		return;
 	}
 
@@ -1012,10 +1010,10 @@ dump_rq:
 	if (md_meminfo_seq_buf)
 		md_dump_meminfo();
 
-#ifdef CONFIG_SLUB_DEBUG
 	if (md_slabinfo_seq_buf)
 		md_dump_slabinfo();
 
+#ifdef CONFIG_SLUB_DEBUG
 	if (md_slabowner_dump_addr)
 		md_dump_slabowner();
 #endif
@@ -1116,6 +1114,10 @@ static bool md_register_memory_dump(int size, char *name)
 	if (!strcmp(name, "PAGEOWNER"))
 		WRITE_ONCE(md_pageowner_dump_addr, buffer_start);
 #endif
+#ifdef CONFIG_SLUB_DEBUG
+	if (!strcmp(name, "SLABOWNER"))
+		WRITE_ONCE(md_slabowner_dump_addr, buffer_start);
+#endif
 	return true;
 }
 
@@ -1182,6 +1184,43 @@ static void update_dump_size(char *name, size_t size,
 	}
 }
 
+#ifdef CONFIG_PAGE_OWNER
+static DEFINE_MUTEX(page_owner_dump_size_lock);
+
+static ssize_t page_owner_dump_size_write(struct file *file,
+					  const char __user *ubuf,
+					  size_t count, loff_t *offset)
+{
+	unsigned long long  size;
+
+	if (kstrtoull_from_user(ubuf, count, 0, &size)) {
+		pr_err_ratelimited("Invalid format for size\n");
+		return -EINVAL;
+	}
+	mutex_lock(&page_owner_dump_size_lock);
+	update_dump_size("PAGEOWNER", size,
+			&md_pageowner_dump_addr, &md_pageowner_dump_size);
+	mutex_unlock(&page_owner_dump_size_lock);
+	return count;
+}
+
+static ssize_t page_owner_dump_size_read(struct file *file, char __user *ubuf,
+				       size_t count, loff_t *offset)
+{
+	char buf[100];
+
+	snprintf(buf, sizeof(buf), "%llu MB\n",
+			md_pageowner_dump_size / SZ_1M);
+	return simple_read_from_buffer(ubuf, count, offset, buf, strlen(buf));
+}
+
+static const struct file_operations proc_page_owner_dump_size_ops = {
+	.open	= simple_open,
+	.write	= page_owner_dump_size_write,
+	.read	= page_owner_dump_size_read,
+};
+#endif
+
 #ifdef CONFIG_SLUB_DEBUG
 static ssize_t slab_owner_dump_size_write(struct file *file,
 					  const char __user *ubuf,
@@ -1226,18 +1265,24 @@ static void md_register_panic_data(void)
 				  &md_meminfo_seq_buf);
 	md_register_panic_entries(MD_SLABINFO_PAGES, "SLABINFO",
 				  &md_slabinfo_seq_buf);
-//#ifdef CONFIG_PAGE_OWNER
-//	if (is_page_owner_enabled()) {
-//		md_register_memory_dump(md_pageowner_dump_size, "PAGEOWNER");
-//		debugfs_create_file("page_owner_dump_size_mb", 0400, NULL, NULL,
-//			    &proc_page_owner_dump_size_ops);
-//	}
-//#endif
+#ifdef CONFIG_PAGE_OWNER
+	if (is_page_owner_enabled()) {
+/*codebase_r1.0_00004.0 build error*/
+#ifdef CONFIG_PAGE_OWNER
+		md_register_memory_dump(md_pageowner_dump_size, "PAGEOWNER");
+		debugfs_create_file("page_owner_dump_size_mb", 0400, NULL, NULL,
+			    &proc_page_owner_dump_size_ops);
+#endif
+	}
+#endif
 #ifdef CONFIG_SLUB_DEBUG
 	if (is_slub_debug_enabled()) {
+/*codebase_r1.0_00004.0 build error*/
+#ifdef CONFIG_SLUB_DEBUG
 		md_register_memory_dump(md_slabowner_dump_size, "SLABOWNER");
 		debugfs_create_file("slab_owner_dump_size_mb", 0400, NULL, NULL,
 			    &proc_slab_owner_dump_size_ops);
+#endif
 	}
 #endif
 }
@@ -1306,7 +1351,7 @@ static void md_register_module_data(void)
 		unregister_module_notifier(&md_module_nb);
 }
 #endif	/* CONFIG_MODULES */
-#endif/* CONFIG_QCOM_MINIDUMP_PANIC_DUMP */
+#endif	/* CONFIG_QCOM_MINIDUMP_PANIC_DUMP */
 
 static int __init msm_minidump_log_init(void)
 {
@@ -1330,6 +1375,9 @@ static int __init msm_minidump_log_init(void)
 	atomic_notifier_chain_register(&panic_notifier_list, &md_panic_blk);
 #ifdef CONFIG_QCOM_MINIDUMP_PANIC_CPU_CONTEXT
 	register_die_notifier(&md_die_context_nb);
+#endif
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_QCOM_MINIDUMP_ENHANCE)
+	register_cpu_contex();
 #endif
 #endif
 	return 0;
