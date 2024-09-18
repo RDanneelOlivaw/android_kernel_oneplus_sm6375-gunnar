@@ -1782,76 +1782,76 @@ static void oplus_track_upload_ttf_info(struct work_struct *work)
 	ttf_info_p->info_uploading = false;
 }
 
-static void oplus_track_upload_bcc_err_info(struct work_struct *work)
-{
-	int index = 0;
-	int curr_time;
-	char power_info[OPLUS_CHG_TRACK_POWER_INFO_LEN] = { 0 };
-	static int upload_count = 0;
-	static int pre_upload_time = 0;
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct oplus_chg_track_hidl_bcc_err *bcc_err =
-		container_of(dwork, struct oplus_chg_track_hidl_bcc_err, bcc_err_load_trigger_work);
-
-	if (!bcc_err)
-		return;
-
-	curr_time = oplus_chg_track_get_local_time_s();
-	if (curr_time - pre_upload_time > TRACK_SOFT_ABNORMAL_UPLOAD_PERIOD)
-		upload_count = 0;
-
-	if (upload_count > TRACK_SOFT_UPLOAD_COUNT_MAX)
-		return;
-
-	mutex_lock(&bcc_err->track_bcc_err_lock);
-	if (bcc_err->bcc_err_uploading) {
-		pr_debug("bcc_err_uploading, should return\n");
-		mutex_unlock(&bcc_err->track_bcc_err_lock);
-		return;
-	}
-
-	if (!strlen(bcc_err->bcc_err.err_reason)) {
-		pr_debug("bcc_err len is invalid\n");
-		mutex_unlock(&bcc_err->track_bcc_err_lock);
-		return;
-	}
-
-	if (bcc_err->bcc_err_load_trigger)
-		kfree(bcc_err->bcc_err_load_trigger);
-	bcc_err->bcc_err_load_trigger = kzalloc(sizeof(oplus_chg_track_trigger), GFP_KERNEL);
-	if (!bcc_err->bcc_err_load_trigger) {
-		pr_err("bcc_err_load_trigger memery alloc fail\n");
-		mutex_unlock(&bcc_err->track_bcc_err_lock);
-		return;
-	}
-	bcc_err->bcc_err_load_trigger->type_reason = TRACK_NOTIFY_TYPE_SOFTWARE_ABNORMAL;
-	bcc_err->bcc_err_load_trigger->flag_reason = TRACK_NOTIFY_FLAG_SMART_CHG_ABNORMAL;
-	bcc_err->bcc_err_uploading = true;
-	upload_count++;
-	pre_upload_time = oplus_chg_track_get_local_time_s();
-	mutex_unlock(&bcc_err->track_bcc_err_lock);
-
-	index += snprintf(&(bcc_err->bcc_err_load_trigger->crux_info[index]), OPLUS_CHG_TRACK_CURX_INFO_LEN - index,
-			  "$$err_scene@@%s", "bcc_err");
-
-	index += snprintf(&(bcc_err->bcc_err_load_trigger->crux_info[index]), OPLUS_CHG_TRACK_CURX_INFO_LEN - index,
-			  "$$err_reason@@%s", bcc_err->bcc_err.err_reason);
-
-	oplus_chg_track_obtain_power_info(power_info, sizeof(power_info));
-	index += snprintf(&(bcc_err->bcc_err_load_trigger->crux_info[index]), OPLUS_CHG_TRACK_CURX_INFO_LEN - index,
-			  "%s", power_info);
-	index += snprintf(&(bcc_err->bcc_err_load_trigger->crux_info[index]), OPLUS_CHG_TRACK_CURX_INFO_LEN - index,
-			  "$$curx_info@@%s", bcc_err->bcc_err.data_buf);
-
-	oplus_chg_track_upload_trigger_data(*(bcc_err->bcc_err_load_trigger));
-	if (bcc_err->bcc_err_load_trigger) {
-		kfree(bcc_err->bcc_err_load_trigger);
-		bcc_err->bcc_err_load_trigger = NULL;
-	}
-	memset(&bcc_err->bcc_err, 0, sizeof(bcc_err->bcc_err));
-	bcc_err->bcc_err_uploading = false;
-	pr_debug("success\n");
-}
+//static void oplus_track_upload_bcc_err_info(struct work_struct *work)
+// {
+//	int index = 0;
+//	int curr_time;
+//	char power_info[OPLUS_CHG_TRACK_POWER_INFO_LEN] = { 0 };
+//	static int upload_count = 0;
+//	static int pre_upload_time = 0;
+//	struct delayed_work *dwork = to_delayed_work(work);
+//	struct oplus_chg_track_hidl_bcc_err *bcc_err =
+//		container_of(dwork, struct oplus_chg_track_hidl_bcc_err, bcc_err_load_trigger_work);
+//
+//	if (!bcc_err)
+//		return;
+//
+//	curr_time = oplus_chg_track_get_local_time_s();
+//	if (curr_time - pre_upload_time > TRACK_SOFT_ABNORMAL_UPLOAD_PERIOD)
+//		upload_count = 0;
+//
+//	if (upload_count > TRACK_SOFT_UPLOAD_COUNT_MAX)
+//		return;
+//
+//	mutex_lock(&bcc_err->track_bcc_err_lock);
+//	if (bcc_err->bcc_err_uploading) {
+//		pr_debug("bcc_err_uploading, should return\n");
+//		mutex_unlock(&bcc_err->track_bcc_err_lock);
+//		return;
+//	}
+//
+//	if (!strlen(bcc_err->bcc_err.err_reason)) {
+//		pr_debug("bcc_err len is invalid\n");
+//		mutex_unlock(&bcc_err->track_bcc_err_lock);
+//		return;
+//	}
+//
+//	if (bcc_err->bcc_err_load_trigger)
+//		kfree(bcc_err->bcc_err_load_trigger);
+//	bcc_err->bcc_err_load_trigger = kzalloc(sizeof(oplus_chg_track_trigger), GFP_KERNEL);
+//	if (!bcc_err->bcc_err_load_trigger) {
+//		pr_err("bcc_err_load_trigger memery alloc fail\n");
+//		mutex_unlock(&bcc_err->track_bcc_err_lock);
+//		return;
+//	}
+//	bcc_err->bcc_err_load_trigger->type_reason = TRACK_NOTIFY_TYPE_SOFTWARE_ABNORMAL;
+//	bcc_err->bcc_err_load_trigger->flag_reason = TRACK_NOTIFY_FLAG_SMART_CHG_ABNORMAL;
+//	bcc_err->bcc_err_uploading = true;
+//	upload_count++;
+//	pre_upload_time = oplus_chg_track_get_local_time_s();
+//	mutex_unlock(&bcc_err->track_bcc_err_lock);
+//
+//	index += snprintf(&(bcc_err->bcc_err_load_trigger->crux_info[index]), OPLUS_CHG_TRACK_CURX_INFO_LEN - index,
+//			  "$$err_scene@@%s", "bcc_err");
+//
+//	index += snprintf(&(bcc_err->bcc_err_load_trigger->crux_info[index]), OPLUS_CHG_TRACK_CURX_INFO_LEN - index,
+//			  "$$err_reason@@%s", bcc_err->bcc_err.err_reason);
+//
+//	oplus_chg_track_obtain_power_info(power_info, sizeof(power_info));
+//	index += snprintf(&(bcc_err->bcc_err_load_trigger->crux_info[index]), OPLUS_CHG_TRACK_CURX_INFO_LEN - index,
+//			  "%s", power_info);
+//	index += snprintf(&(bcc_err->bcc_err_load_trigger->crux_info[index]), OPLUS_CHG_TRACK_CURX_INFO_LEN - index,
+//			  "$$curx_info@@%s", bcc_err->bcc_err.data_buf);
+//
+//	oplus_chg_track_upload_trigger_data(*(bcc_err->bcc_err_load_trigger));
+//	if (bcc_err->bcc_err_load_trigger) {
+//		kfree(bcc_err->bcc_err_load_trigger);
+//		bcc_err->bcc_err_load_trigger = NULL;
+//	}
+//	memset(&bcc_err->bcc_err, 0, sizeof(bcc_err->bcc_err));
+//	bcc_err->bcc_err_uploading = false;
+//	pr_debug("success\n");
+//}
 
 static void oplus_track_upload_uisoh_info(struct work_struct *work)
 {
@@ -1982,7 +1982,7 @@ static int oplus_chg_track_bcc_err_init(struct oplus_chg_track *chip)
 	bcc_err->bcc_err_load_trigger = NULL;
 
 	memset(&bcc_err->bcc_err, 0, sizeof(bcc_err->bcc_err));
-	INIT_DELAYED_WORK(&bcc_err->bcc_err_load_trigger_work, oplus_track_upload_bcc_err_info);
+//	INIT_DELAYED_WORK(&bcc_err->bcc_err_load_trigger_work, oplus_track_upload_bcc_err_info);
 
 	return 0;
 }
