@@ -141,8 +141,9 @@ struct md_module_data {
 	unsigned int size;
 };
 
-void md_dump_pageowner(void);
-bool is_page_owner_enabled(void);
+static void md_dump_pageowner(void);
+static bool is_page_owner_enabled(void);
+
 static struct seq_buf *md_mod_info_seq_buf;
 static int mod_curr_count;
 static DEFINE_SPINLOCK(md_modules_lock);
