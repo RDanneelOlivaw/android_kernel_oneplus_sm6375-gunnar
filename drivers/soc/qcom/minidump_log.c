@@ -49,10 +49,6 @@
 #include <linux/dma-contiguous.h>
 #endif
 
-#if IS_ENABLED(CONFIG_OPLUS_FEATURE_QCOM_MINIDUMP_ENHANCE)
-#include <soc/oplus/system/qcom_minidump_enhance.h>
-#endif
-
 #ifdef CONFIG_QCOM_DYN_MINIDUMP_STACK
 
 #include <trace/events/sched.h>
@@ -140,9 +136,6 @@ struct md_module_data {
 	void *base;
 	unsigned int size;
 };
-
-static void md_dump_pageowner(void);
-static bool is_page_owner_enabled(void);
 
 static struct seq_buf *md_mod_info_seq_buf;
 static int mod_curr_count;
@@ -663,10 +656,16 @@ static void md_dump_task_info(struct task_struct *task, char *status,
 
 	se = &task->se;
 	if (task == curr) {
+#ifdef CONFIG_ARM64
 		seq_buf_printf(md_runq_seq_buf,
 			       "[status: curr] pid: %d comm: %s preempt: %#x\n",
 			       task_pid_nr(task), task->comm,
 			       task->thread_info.preempt_count);
+#else
+		seq_buf_printf(md_runq_seq_buf,
+				"[status: curr] pid: %d comm: %s\n",
+				task_pid_nr(task), task->comm);
+#endif
 		return;
 	}
 
@@ -1013,10 +1012,10 @@ dump_rq:
 	if (md_meminfo_seq_buf)
 		md_dump_meminfo();
 
+#ifdef CONFIG_SLUB_DEBUG
 	if (md_slabinfo_seq_buf)
 		md_dump_slabinfo();
 
-#ifdef CONFIG_SLUB_DEBUG
 	if (md_slabowner_dump_addr)
 		md_dump_slabowner();
 #endif
@@ -1270,22 +1269,16 @@ static void md_register_panic_data(void)
 				  &md_slabinfo_seq_buf);
 #ifdef CONFIG_PAGE_OWNER
 	if (is_page_owner_enabled()) {
-/*codebase_r1.0_00004.0 build error*/
-#ifdef CONFIG_PAGE_OWNER
 		md_register_memory_dump(md_pageowner_dump_size, "PAGEOWNER");
 		debugfs_create_file("page_owner_dump_size_mb", 0400, NULL, NULL,
 			    &proc_page_owner_dump_size_ops);
-#endif
 	}
 #endif
 #ifdef CONFIG_SLUB_DEBUG
 	if (is_slub_debug_enabled()) {
-/*codebase_r1.0_00004.0 build error*/
-#ifdef CONFIG_SLUB_DEBUG
 		md_register_memory_dump(md_slabowner_dump_size, "SLABOWNER");
 		debugfs_create_file("slab_owner_dump_size_mb", 0400, NULL, NULL,
 			    &proc_slab_owner_dump_size_ops);
-#endif
 	}
 #endif
 }
@@ -1378,9 +1371,6 @@ static int __init msm_minidump_log_init(void)
 	atomic_notifier_chain_register(&panic_notifier_list, &md_panic_blk);
 #ifdef CONFIG_QCOM_MINIDUMP_PANIC_CPU_CONTEXT
 	register_die_notifier(&md_die_context_nb);
-#endif
-#if IS_ENABLED(CONFIG_OPLUS_FEATURE_QCOM_MINIDUMP_ENHANCE)
-	register_cpu_contex();
 #endif
 #endif
 	return 0;
