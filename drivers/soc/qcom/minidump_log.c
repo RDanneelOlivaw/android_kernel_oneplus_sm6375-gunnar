@@ -165,6 +165,14 @@ static void __init register_log_buf(void)
 		pr_err("Failed to add logbuf in Minidump\n");
 }
 
+
+//void md_dump_pageowner(void)
+//{
+//loff_t k = 0;
+
+//read_page_owner(NULL, NULL, md_pageowner_dump_size, &k);
+//}
+
 static int register_stack_entry(struct md_region *ksp_entry, u64 sp, u64 size)
 {
 	struct page *sp_page;
@@ -1020,10 +1028,10 @@ dump_rq:
 		md_dump_slabowner();
 #endif
 
-#ifdef CONFIG_PAGE_OWNER
-	if (md_pageowner_dump_addr)
-		md_dump_pageowner();
-#endif
+//#ifdef CONFIG_PAGE_OWNER
+//	if (md_pageowner_dump_addr)
+//		md_dump_pageowner();
+//#endif
 	md_in_oops_handler = false;
 	return NOTIFY_DONE;
 }
@@ -1267,13 +1275,14 @@ static void md_register_panic_data(void)
 				  &md_meminfo_seq_buf);
 	md_register_panic_entries(MD_SLABINFO_PAGES, "SLABINFO",
 				  &md_slabinfo_seq_buf);
-#ifdef CONFIG_PAGE_OWNER
-	if (is_page_owner_enabled()) {
-		md_register_memory_dump(md_pageowner_dump_size, "PAGEOWNER");
-		debugfs_create_file("page_owner_dump_size_mb", 0400, NULL, NULL,
-			    &proc_page_owner_dump_size_ops);
-	}
-#endif
+// #ifdef CONFIG_PAGE_OWNER
+//	if (is_page_owner_enabled()) {
+//		md_register_memory_dump(md_pageowner_dump_size, "PAGEOWNER");
+//		debugfs_create_file("page_owner_dump_size_mb", 0400, NULL, NULL,
+//			    &proc_page_owner_dump_size_ops);
+//	}
+//#endif
+
 #ifdef CONFIG_SLUB_DEBUG
 	if (is_slub_debug_enabled()) {
 		md_register_memory_dump(md_slabowner_dump_size, "SLABOWNER");
